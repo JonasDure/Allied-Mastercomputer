@@ -1,0 +1,57 @@
+import serial
+import time
+import chess
+import chess.engine
+import chess.pgn
+
+# CONFIGURATION
+STOCKFISH_PATH = "stockfish"  # or full path like "C:/engines/stockfish.exe"
+SERIAL_PORT = "COM3"          # Change to your Arduino port
+BAUD_RATE = 9600
+
+# Setup serial connection
+arduino = serial.Serial(SERIAL_PORT, BAUD_RATE)
+time.sleep(2)  # Wait for Arduino to reset
+
+# Setup Stockfish engine
+engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
+
+# Loop for user input
+while True:
+    user_input = input("Enter a move sequence (e.g. e4 e5 Nf3 Nc6) or 'exit': ")
+    if user_input.lower() == 'exit':
+        break
+
+    try:
+        # Parse the move sequence into a board
+        board = chess.Board()
+        for move in user_input.strip().split():
+            board.push_san(move)
+
+        # Evaluate the position
+        info = engine.analyse(board, chess.engine.Limit(time=1))
+        score = info["score"].white().score(mate_score=10000)  # Adjust if black side
+
+        if score is None:
+            print("Evaluation: Mate detected or undefined.")
+            pulses = 10  # Arbitrary number for mate or undefined
+        else:
+            n = abs(score)
+            pulses = int(n / 2)
+            print(f"Evaluation: {score} centipawns → Pulses: {pulses}")
+
+#ignore evaluation part if you have another plan of how to evalutate scores just focus on the last part and the libraries required
+
+        # Send to Arduino
+        arduino.write(f"{pulses}\n".encode())
+
+    except Exception as e:
+        print("Error:", e)
+
+# Cleanup
+engine.quit()
+arduino.close()
+
+
+engine.quit()
+arduino.close()
