@@ -1,0 +1,44 @@
+const int relayPin = 9;
+int numPulses = 0;
+bool running = false;
+unsigned long lastToggleTime = 0;
+bool relayState = false;
+int pulseCount = 0;
+
+void setup() {
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, LOW);
+  Serial.begin(9600);
+}
+
+void loop() {
+  if (Serial.available()) {
+    numPulses = Serial.parseInt(); // Read an int like "5\n"
+    if (numPulses > 0) {
+      running = true;
+      pulseCount = 0;
+      relayState = false;
+      lastToggleTime = millis();
+      digitalWrite(relayPin, LOW);
+    }
+  }
+
+  if (running) {
+    unsigned long currentTime = millis();
+
+    if ((relayState && currentTime - lastToggleTime >= 500) ||  // ON for 0.5s
+        (!relayState && currentTime - lastToggleTime >= 500)) { // OFF for 0.5s
+      relayState = !relayState;
+      digitalWrite(relayPin, relayState ? HIGH : LOW);
+      lastToggleTime = currentTime;
+
+      if (!relayState) {
+        pulseCount++;
+        if (pulseCount >= numPulses) {
+          running = false;
+          digitalWrite(relayPin, LOW); // Ensure it's off at end
+        }
+      }
+    }
+  }
+}
